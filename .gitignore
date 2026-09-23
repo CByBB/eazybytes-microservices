@@ -1,6 +1,6 @@
 HELP.md
 target/
-docker-compose/**/.data/
+logs/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

@@ -1,3 +1,5 @@
+server:
+  port: 8072
 spring:
   application:
     name: "gatewayserver"
@@ -14,17 +16,6 @@ spring:
           httpclient:
             connect-timeout: 1000
             response-timeout: 10s
-  data:
-    redis:
-      connect-timeout: 2s
-      host: localhost
-      port: 6379
-      timeout: 1s
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          jwk-set-uri: "http://localhost:7080/realms/master/protocol/openid-connect/certs"
 management:
   endpoints:
     web:
@@ -40,6 +31,37 @@ management:
     tags:
       application: ${spring.application.name}
 
+eureka:
+  instance:
+    preferIpAddress: true
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    disable-swagger-default-url: true
+    urls-primary-name: accounts
+    urls:
+      - name: accounts
+        url: /eazybank/accounts/v3/api-docs
+      - name: cards
+        url: /eazybank/cards/v3/api-docs
+      - name: loans
+        url: /eazybank/loans/v3/api-docs
+      - name: message
+        url: /eazybank/message/v3/api-docs
+      - name: configserver
+        url: /eazybank/configserver/v3/api-docs
+      - name: gateway
+        url: /v3/api-docs
+
 info:
   app:
     name: "gatewayserver"
@@ -48,9 +70,8 @@ info:
 
 logging:
   level:
-    com:
-      eazybytes:
-        gatewayserver: DEBUG
+    root: INFO
+    com.eazybytes.gatewayserver: INFO
   pattern:
     level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"
 
@@ -61,4 +82,3 @@ resilience4j.circuitbreaker:
       permittedNumberOfCallsInHalfOpenState: 2
       failureRateThreshold: 50
       waitDurationInOpenState: 10000
-

@@ -59,10 +59,15 @@ info:
     description: "Eazy Bank Loans Application"
     version: "1.0.0"
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
 logging:
   level:
-    com:
-      eazybytes:
-        loans: DEBUG
+    root: INFO
+    com.eazybytes.loans: INFO
   pattern:
     level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"

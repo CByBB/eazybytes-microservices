@@ -6,13 +6,17 @@ import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.info.Contact;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.info.License;
+import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
-@SpringBootApplication
+@SpringBootApplication(excludeName = {
+		"org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration",
+		"org.springframework.cloud.stream.binder.kafka.config.KafkaBinderConfiguration"
+})
 @EnableFeignClients
 /*@ComponentScans({ @ComponentScan("com.eazybytes.accounts.controller") })
 @EnableJpaRepositories("com.eazybytes.accounts.repository")
@@ -34,9 +38,13 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 						url = "https://www.eazybytes.com"
 				)
 		),
+		servers = {
+				@Server(url = "/eazybank/accounts", description = "API gateway"),
+				@Server(url = "/", description = "Direct service")
+		},
 		externalDocs = @ExternalDocumentation(
 				description =  "EazyBank Accounts microservice REST API Documentation",
-				url = "https://www.eazybytes.com/swagger-ui.html"
+				url = "/swagger-ui.html"
 		)
 )
 public class AccountsApplication {

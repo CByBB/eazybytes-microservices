@@ -4,17 +4,47 @@ server:
 spring:
   application:
     name: "message"
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+      - org.springframework.cloud.stream.binder.kafka.config.KafkaBinderConfiguration
   cloud:
     function:
-      definition: email|sms
-    stream:
-      bindings:
-        emailsms-in-0:
-          destination: send-communication
-          group: ${spring.application.name}
-        emailsms-out-0:
-          destination: communication-sent
-      kafka:
-        binder:
-          brokers:
-            - localhost:9092
+      definition: ""
+      autodetect: false
+
+eazybank:
+  messaging:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  health:
+    readiness-state:
+      enabled: true
+    liveness-state:
+      enabled: true
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    root: INFO
+    com.eazybytes.message: INFO
+    org.apache.kafka: ERROR
+    org.springframework.kafka: ERROR
+    org.springframework.cloud.stream: WARN
+    org.springframework.cloud.stream.binder.kafka: ERROR
+  pattern:
+    level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"

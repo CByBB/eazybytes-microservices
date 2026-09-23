@@ -38,8 +38,6 @@
         <lombok.version>1.18.42</lombok.version>
         <otel.version>2.22.0</otel.version>
         <micrometer.version>1.16.0</micrometer.version>
-        <jib.version>3.5.1</jib.version>
-        <image.tag>latest</image.tag>
     </properties>
     <modules>
         <module>common</module>

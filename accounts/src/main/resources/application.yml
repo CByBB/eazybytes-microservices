@@ -19,6 +19,10 @@ spring:
       ddl-auto: update
     show-sql: true
 
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+      - org.springframework.cloud.stream.binder.kafka.config.KafkaBinderConfiguration
   config:
     import: "optional:configserver:http://localhost:8071/"
   cloud:
@@ -26,18 +30,13 @@ spring:
       circuitbreaker:
         enabled: true
     function:
-      definition: updateCommunication
-    stream:
-      bindings:
-        updateCommunication-in-0:
-          destination: communication-sent
-          group: ${spring.application.name}
-        sendCommunication-out-0:
-          destination: send-communication
-      kafka:
-        binder:
-          brokers:
-            - localhost:9092
+      definition: ""
+      autodetect: false
+
+eazybank:
+  messaging:
+    enabled: false
+
 management:
   endpoints:
     web:
@@ -76,11 +75,20 @@ info:
     description: "Eazy Bank Accounts Application"
     version: "1.0.0"
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
 logging:
   level:
-    com:
-      eazybytes:
-        accounts: DEBUG
+    root: INFO
+    com.eazybytes.accounts: INFO
+    org.apache.kafka: ERROR
+    org.springframework.kafka: ERROR
+    org.springframework.cloud.stream: WARN
+    org.springframework.cloud.stream.binder.kafka: ERROR
   pattern:
     level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"
 

@@ -1,15 +1,17 @@
 # Eazy Bank
 
-A banking platform split into Spring Boot microservices. Clients talk to the API gateway; the gateway routes to accounts, cards, and loans. Config, discovery, security, messaging, and observability sit around those services.
+A banking platform split into Spring Boot microservices. Clients talk to the API gateway; the gateway routes to accounts, cards, and loans.
+
+This project runs **locally with Java and Maven only**. It does not use Docker.
 
 ```
 Client
-  → gatewayserver   (8072)  routing, JWT, rate limit
+  → gatewayserver   (8072)  routing
     → eurekaserver  (8070)  service discovery
     → accounts      (8080)  customers and accounts
     → cards         (9000)  credit cards
     → loans         (8090)  loans
-    → message               Kafka notifications
+    → message       (9010)  notifications
     → configserver  (8071)  central config
 ```
 
@@ -26,7 +28,6 @@ eazybank/
 ├── eurekaserver/
 ├── gatewayserver/
 ├── message/
-├── docker-compose/         # local stack (default / qa / prod)
 └── Microservices.postman_collection.json
 ```
 
@@ -37,61 +38,106 @@ eazybank/
 | **loans** | Loan APIs |
 | **configserver** | Spring Cloud Config |
 | **eurekaserver** | Netflix Eureka registry |
-| **gatewayserver** | Spring Cloud Gateway, Keycloak JWT, Redis rate limiting |
-| **message** | Async notifications over Kafka |
+| **gatewayserver** | Spring Cloud Gateway |
+| **message** | Async notifications |
 
-Also included: Resilience4j (circuit breaker, retry, rate limiter), Actuator, Prometheus, OpenTelemetry.
+Each business service uses an in-memory H2 database.
 
 ## Prerequisites
 
 - Java 21
 - Maven 3.9+
-- Docker Desktop
 
 ## Build
 
-Install the BOM and common library first, then the rest:
+From the repo root, one command is enough. It builds `eazy-bom` first, then every service:
 
 ```bash
-mvn -f eazy-bom/pom.xml clean install -DskipTests
 mvn clean install -DskipTests
 ```
 
-Docker images (Google Jib, tag `latest`):
+You do not need a separate `eazy-bom` command first. Run this after you clone the repo, or after you change code. It does not start the servers.
+
+### Install each module separately
+
+Use these when you only changed one service. `-am` also installs that module’s dependencies (`eazy-bom` / `common`).
 
 ```bash
-mvn -pl accounts,cards,loans,configserver,eurekaserver,gatewayserver,message compile jib:dockerBuild
+mvn -pl eazy-bom clean install -DskipTests
+mvn -pl configserver -am clean install -DskipTests
+mvn -pl eurekaserver -am clean install -DskipTests
+mvn -pl accounts -am clean install -DskipTests
+mvn -pl cards -am clean install -DskipTests
+mvn -pl loans -am clean install -DskipTests
+mvn -pl message -am clean install -DskipTests
+mvn -pl gatewayserver -am clean install -DskipTests
 ```
 
-## Run the stack
+| Command | What it installs |
+|---|---|
+| `mvn -pl eazy-bom clean install -DskipTests` | Shared BOM and `common` library |
+| `mvn -pl configserver -am clean install -DskipTests` | Config server |
+| `mvn -pl eurekaserver -am clean install -DskipTests` | Eureka |
+| `mvn -pl accounts -am clean install -DskipTests` | Accounts |
+| `mvn -pl cards -am clean install -DskipTests` | Cards |
+| `mvn -pl loans -am clean install -DskipTests` | Loans |
+| `mvn -pl message -am clean install -DskipTests` | Message |
+| `mvn -pl gatewayserver -am clean install -DskipTests` | Gateway |
 
-Default profile (H2 inside each service):
+## Run
+
+From the repo root (Git Bash):
 
 ```bash
-docker compose -f docker-compose/default/docker-compose.yml up
+./start-all.sh
 ```
 
-QA or prod config profiles:
+That starts every service in order and waits until each port is ready. Logs go to `logs/`. Each log file is truncated on start and capped at 2MB so Kafka or Maven output cannot grow one file without bound. Kafka messaging is off locally (there is no broker); accounts and message still start as normal HTTP services. Stop them with:
 
 ```bash
-docker compose -f docker-compose/qa/docker-compose.yml up
-docker compose -f docker-compose/prod/docker-compose.yml up
+./start-all.sh stop
 ```
 
-Without Docker, start infrastructure first (Kafka, Redis, Keycloak), then each service with `mvn spring-boot:run` in this order: `configserver` → `eurekaserver` → `accounts` / `cards` / `loans` / `message` → `gatewayserver`.
+### Run each service separately
+
+Use a new terminal for each command, from the repo root, in this order. Wait until a service finishes starting before you start the next one.
+
+```bash
+mvn -pl configserver spring-boot:run
+mvn -pl eurekaserver spring-boot:run
+mvn -pl accounts spring-boot:run
+mvn -pl cards spring-boot:run
+mvn -pl loans spring-boot:run
+mvn -pl message spring-boot:run
+mvn -pl gatewayserver spring-boot:run
+```
+
+| Command | Service | Port |
+|---|---|---|
+| `mvn -pl configserver spring-boot:run` | Config server | 8071 |
+| `mvn -pl eurekaserver spring-boot:run` | Eureka | 8070 |
+| `mvn -pl accounts spring-boot:run` | Accounts | 8080 |
+| `mvn -pl cards spring-boot:run` | Cards | 9000 |
+| `mvn -pl loans spring-boot:run` | Loans | 8090 |
+| `mvn -pl message spring-boot:run` | Message | 9010 |
+| `mvn -pl gatewayserver spring-boot:run` | Gateway | 8072 |
 
 ## Local URLs
 
 | What | URL |
 |---|---|
 | API gateway | http://localhost:8072 |
-| Eureka | http://localhost:8070 |
+| Swagger UI | http://localhost:8072/swagger-ui.html |
+| Eureka dashboard | http://localhost:8070 |
 | Config server | http://localhost:8071 |
-| Keycloak | http://localhost:7080 (`admin` / `admin`) |
-| Grafana | http://localhost:3000 |
-| Prometheus | http://localhost:9090 |
+| Accounts | http://localhost:8080 |
+| Cards | http://localhost:9000 |
+| Loans | http://localhost:8090 |
+| Message | http://localhost:9010 |
 
-Import `Microservices.postman_collection.json` for sample API calls. GET routes on the gateway are open; write routes need a Keycloak JWT with role `ACCOUNTS`, `CARDS`, or `LOANS`.
+Open http://localhost:8072/swagger-ui.html for Springdoc Swagger UI. The dropdown lists accounts, cards, loans, message, configserver, and gateway. Eureka is a registry UI at http://localhost:8070, not a REST API, so it is not in that list.
+
+Import `Microservices.postman_collection.json` for sample API calls. Gateway routes are open.
 
 ## Config
 

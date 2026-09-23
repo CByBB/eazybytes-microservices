@@ -13,9 +13,9 @@ import com.eazybytes.accounts.mapper.CustomerMapper;
 import com.eazybytes.accounts.repository.AccountsRepository;
 import com.eazybytes.accounts.repository.CustomerRepository;
 import com.eazybytes.accounts.service.IAccountsService;
-import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 
@@ -24,14 +24,21 @@ import java.util.Optional;
 import java.util.Random;
 
 @Service
-@AllArgsConstructor
 public class AccountsServiceImpl  implements IAccountsService {
 
     private static final Logger log = LoggerFactory.getLogger(AccountsServiceImpl.class);
 
-    private AccountsRepository accountsRepository;
-    private CustomerRepository customerRepository;
+    private final AccountsRepository accountsRepository;
+    private final CustomerRepository customerRepository;
     private final StreamBridge streamBridge;
+
+    public AccountsServiceImpl(AccountsRepository accountsRepository,
+                               CustomerRepository customerRepository,
+                               ObjectProvider<StreamBridge> streamBridge) {
+        this.accountsRepository = accountsRepository;
+        this.customerRepository = customerRepository;
+        this.streamBridge = streamBridge.getIfAvailable();
+    }
 
     /**
      * @param customerDto - CustomerDto Object
@@ -52,9 +59,17 @@ public class AccountsServiceImpl  implements IAccountsService {
     private void sendCommunication(Accounts account, Customer customer) {
         var accountsMsgDto = new AccountsMsgDto(account.getAccountNumber(), customer.getName(),
                 customer.getEmail(), customer.getMobileNumber());
+        if (streamBridge == null) {
+            log.info("Skipping communication event; messaging is disabled");
+            return;
+        }
         log.info("Sending Communication request for the details: {}", accountsMsgDto);
-        var result = streamBridge.send("sendCommunication-out-0", accountsMsgDto);
-        log.info("Is the Communication request successfully triggered ? : {}", result);
+        try {
+            var result = streamBridge.send("sendCommunication-out-0", accountsMsgDto);
+            log.info("Is the Communication request successfully triggered ? : {}", result);
+        } catch (Exception ex) {
+            log.warn("Skipping communication event; Kafka is not available: {}", ex.getMessage());
+        }
     }
 
     /**

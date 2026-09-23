@@ -2,20 +2,12 @@ spring:
   application:
     name: "configserver"
   profiles:
-    # active: native
-    active: git
+    active: native
   cloud:
     config:
       server:
-        # native:
-          # search-locations: "classpath:/config"
-          # search-locations: "file:///Users//eazybytes//Documents//config"
-        git:
-          uri: "https://github.com/eazybytes/eazybytes-config.git"
-          default-label: main
-          timeout: 5
-          clone-on-start: true
-          force-pull: true
+        native:
+          search-locations: classpath:/config
 
 management:
   endpoints:
@@ -41,6 +33,14 @@ encrypt:
 server:
   port: 8071
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
 logging:
+  level:
+    root: INFO
   pattern:
     level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"
