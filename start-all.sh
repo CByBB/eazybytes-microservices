@@ -58,15 +58,30 @@ svc() {
   printf "%s%s%s%s" "$BOLD" "$(service_color "$name")" "$name" "$RESET"
 }
 
+# Prefer bundled portable kit (tools/) when present; else Scoop / system install.
+if [[ -x "$ROOT/tools/jdk/bin/java" ]]; then
+  export JAVA_HOME="$ROOT/tools/jdk"
+fi
 if [[ -z "${JAVA_HOME:-}" || ! -x "${JAVA_HOME}/bin/java" ]]; then
   if [[ -x "$HOME/scoop/apps/temurin21-jdk/current/bin/java" ]]; then
     export JAVA_HOME="$HOME/scoop/apps/temurin21-jdk/current"
   fi
 fi
-export PATH="${JAVA_HOME:+$JAVA_HOME/bin:}$HOME/scoop/apps/maven/current/bin:$PATH"
 
-if ! command -v mvn >/dev/null 2>&1; then
-  say "$RED" "FAIL" "Maven not found. Install Maven or add it to PATH."
+MVN_BIN="mvn"
+if [[ -x "$ROOT/tools/maven/bin/mvn" ]]; then
+  MVN_BIN="$ROOT/tools/maven/bin/mvn"
+  export MAVEN_HOME="$ROOT/tools/maven"
+fi
+export PATH="${JAVA_HOME:+$JAVA_HOME/bin:}${MAVEN_HOME:+$MAVEN_HOME/bin:}$HOME/scoop/apps/maven/current/bin:$PATH"
+
+MVN_ARGS=()
+if [[ -d "$ROOT/tools/m2" && -f "$ROOT/.mvn/settings-offline.xml" ]]; then
+  MVN_ARGS+=(-o -s "$ROOT/.mvn/settings-offline.xml" -Dmaven.repo.local="$ROOT/tools/m2")
+fi
+
+if ! command -v "$MVN_BIN" >/dev/null 2>&1 && [[ ! -x "$MVN_BIN" ]]; then
+  say "$RED" "FAIL" "Maven not found. Run prepare-offline.bat or install Maven."
   exit 1
 fi
 
@@ -146,7 +161,7 @@ start_service() {
       )
       ;;
   esac
-  nohup mvn -pl "$module" spring-boot:run \
+  nohup "$MVN_BIN" "${MVN_ARGS[@]}" -pl "$module" spring-boot:run \
     -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
     "${run_args[@]}" \
     > "$log" 2>&1 &

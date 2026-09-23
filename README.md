@@ -4,6 +4,8 @@ A banking platform split into Spring Boot microservices. Clients talk to the API
 
 This project runs **locally with Java and Maven only**. It does not use Docker.
 
+It is designed to run on a **fully offline Windows PC** that has only a browser, Postman, and a code IDE — no system Java or Maven install required — after you prepare a portable kit on an online machine.
+
 ```
 Client
   → gatewayserver   (8072)  routing
@@ -28,6 +30,12 @@ eazybank/
 ├── eurekaserver/
 ├── gatewayserver/
 ├── message/
+├── tools/                  # portable JDK + Maven + m2 (created by prepare-offline.bat)
+├── prepare-offline.bat
+├── package-offline.bat
+├── build.bat
+├── start-all.bat
+├── test-all.bat
 └── Microservices.postman_collection.json
 ```
 
@@ -43,12 +51,77 @@ eazybank/
 
 Each business service uses an in-memory H2 database.
 
-## Prerequisites
+## Offline Windows kit (recommended)
+
+No system Java, Maven, Git, or Docker is required on the target PC.
+
+### 1. On an online PC (this machine)
+
+Download a portable JDK 21, Maven, and fill a project-local dependency cache:
+
+```bat
+prepare-offline.bat
+```
+
+Then build the zip to copy:
+
+```bat
+package-offline.bat
+```
+
+That creates `eazybank-offline.zip` (typically ~0.5–1.5 GB). It includes source, scripts, `tools\jdk`, `tools\maven`, and `tools\m2`. `tools\` is gitignored; only the zip carries those binaries.
+
+### 2. On the offline PC
+
+1. Copy and unzip `eazybank-offline.zip`.
+2. Build (uses only the bundled cache; no network):
+
+```bat
+build.bat
+```
+
+3. Start every service in order:
+
+```bat
+start-all.bat
+```
+
+4. Open http://localhost:8072 or Swagger at http://localhost:8072/swagger-ui.html. Import `Microservices.postman_collection.json` into Postman.
+
+5. After code changes, rebuild and restart:
+
+```bat
+build.bat
+start-all.bat stop
+start-all.bat
+```
+
+6. Optional full API regression:
+
+```bat
+test-all.bat
+```
+
+Stop everything with:
+
+```bat
+start-all.bat stop
+```
+
+### Offline development notes
+
+- Compile and run always go through `build.bat` / `start-all.bat` (or the bundled `tools\maven` with `-o`).
+- New Maven dependencies **cannot** be downloaded offline. Add them on an online PC, re-run `prepare-offline.bat`, and re-zip.
+- IDE autocomplete works only if the Java language support is **already installed** in that IDE. Point Cursor / VS Code at the kit via [`.vscode/settings.json`](.vscode/settings.json). If the Java extension was never installed, use the IDE as an editor and Maven from `cmd`.
+
+## Prerequisites (online / optional system install)
+
+If you are not using the portable kit:
 
 - Java 21
 - Maven 3.9+
 
-## Build
+## Build (system Maven)
 
 From the repo root, one command is enough. It builds `eazy-bom` first, then every service:
 
@@ -56,7 +129,7 @@ From the repo root, one command is enough. It builds `eazy-bom` first, then ever
 mvn clean install -DskipTests
 ```
 
-You do not need a separate `eazy-bom` command first. Run this after you clone the repo, or after you change code. It does not start the servers.
+With the portable kit, prefer `build.bat` (offline) instead.
 
 ### Install each module separately
 
@@ -86,13 +159,22 @@ mvn -pl gatewayserver -am clean install -DskipTests
 
 ## Run
 
-From the repo root (Git Bash):
+### Windows (portable kit)
+
+```bat
+build.bat
+start-all.bat
+```
+
+### Git Bash (optional)
+
+If `tools/` is present, [start-all.sh](start-all.sh) uses the bundled JDK/Maven and offline repo. Otherwise it uses Scoop / system Maven:
 
 ```bash
 ./start-all.sh
 ```
 
-That starts every service in order and waits until each port is ready. Logs go to `logs/`. Each log file is truncated on start and capped at 2MB so Kafka or Maven output cannot grow one file without bound. Kafka messaging is off locally (there is no broker); accounts and message still start as normal HTTP services. Stop them with:
+That starts every service in order and waits until each port is ready. Logs go to `logs/`. Each log file is truncated on start and capped at 2MB. Kafka messaging is off locally (there is no broker); accounts and message still start as normal HTTP services. Stop them with:
 
 ```bash
 ./start-all.sh stop
@@ -104,11 +186,11 @@ After the stack is up, call every OpenAPI operation through the gateway:
 ./test-all.sh
 ```
 
-That covers accounts, cards, loans, customer details, message, gateway fallback, and every config-server path including encrypt/decrypt. It then checks that no documented operation was skipped. Use it after a Java or dependency change. It exits `0` if everything passed.
+On Windows without Git Bash, use `test-all.bat` instead.
 
 ### Run each service separately
 
-Use a new terminal for each command, from the repo root, in this order. Wait until a service finishes starting before you start the next one.
+Use a new terminal for each command, from the repo root, in this order. Wait until a service finishes starting before you start the next one. With the kit, use `tools\maven\bin\mvn.cmd` and jars under each module’s `target\` after `build.bat`.
 
 ```bash
 mvn -pl configserver spring-boot:run
@@ -149,4 +231,4 @@ Import `Microservices.postman_collection.json` for sample API calls. Gateway rou
 
 ## Config
 
-Each service loads optional config from `http://localhost:8071/`. Profile files live in `configserver/src/main/resources/config/` (`accounts.yml`, `accounts-qa.yml`, `accounts-prod.yml`, and the same for cards/loans).
+Each service loads optional config from `http://localhost:8071/`. Profile files live in `configserver/src/main/resources/config/` (`accounts.yml`, `accounts-qa.yml`, `accounts-prod.yml`, and the same for cards/loans). Config is native classpath (no Git remote), so it works offline.
