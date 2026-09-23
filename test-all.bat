@@ -47,18 +47,24 @@ function Mark([string]$Spec, [string]$Method, [string]$Path) {
 
 function Request([string]$Method, [string]$Url, [string]$Data = '', [string]$ContentType = 'application/json') {
   $tmp = [System.IO.Path]::GetTempFileName()
-  $args = @('--noproxy', '*', '-sS', '-o', $tmp, '-w', '%{http_code}', '-X', $Method,
-    '-H', "eazybank-correlation-id: $Corr", '--max-time', '20', $Url)
+  $bodyFile = $null
+  $curlArgs = New-Object 'System.Collections.Generic.List[string]'
+  [void]$curlArgs.AddRange([string[]]@('--noproxy', '*', '-sS', '-o', $tmp, '-w', '%{http_code}', '-X', $Method,
+    '-H', "eazybank-correlation-id: $Corr", '--max-time', '20'))
   if ($Data -ne '') {
-    $args = @('--noproxy', '*', '-sS', '-o', $tmp, '-w', '%{http_code}', '-X', $Method,
-      '-H', "eazybank-correlation-id: $Corr", '-H', "Content-Type: $ContentType",
-      '--max-time', '20', '--data', $Data, $Url)
+    # PowerShell + curl.exe --data strips JSON quotes; write body to a file instead.
+    $bodyFile = [System.IO.Path]::GetTempFileName()
+    [System.IO.File]::WriteAllText($bodyFile, $Data, [System.Text.UTF8Encoding]::new($false))
+    [void]$curlArgs.AddRange([string[]]@('-H', "Content-Type: $ContentType", '--data-binary', "@$bodyFile"))
   }
+  [void]$curlArgs.Add($Url)
   try {
-    $code = & curl.exe @args 2>$null
+    $code = & curl.exe @($curlArgs.ToArray()) 2>$null
     if (-not $code) { $code = '000' }
   } catch {
     $code = '000'
+  } finally {
+    if ($bodyFile) { Remove-Item -Force $bodyFile -ErrorAction SilentlyContinue }
   }
   $script:LastCode = "$code".Trim()
   if (Test-Path $tmp) {
@@ -70,7 +76,16 @@ function Request([string]$Method, [string]$Url, [string]$Data = '', [string]$Con
 }
 
 function Expect([string]$Name, [string]$Spec, [string]$Method, [string]$Path, [string]$Url, [string]$Want, [string]$Data = '', [string]$ContentType = 'application/json') {
-  Request $Method $Url $Data $ContentType
+  $attempts = 1
+  if ($Url -like '*/eazybank/*') { $attempts = 5 }
+  for ($try = 1; $try -le $attempts; $try++) {
+    Request $Method $Url $Data $ContentType
+    $ok = ($Want -split '\s+') -contains $script:LastCode
+    if ($ok) { break }
+    # Gateway may return 503 until Eureka registration settles.
+    if ($script:LastCode -ne '503' -or $try -eq $attempts) { break }
+    Start-Sleep -Seconds 2
+  }
   Mark $Spec $Method $Path
   $ok = ($Want -split '\s+') -contains $script:LastCode
   if ($ok) {

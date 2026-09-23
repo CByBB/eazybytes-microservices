@@ -177,8 +177,9 @@ function Start-OneService($Svc) {
   }
   $log = Join-Path $LogDir "$name.log"
   $pidFile = Join-Path $LogDir "$name.pid"
+  $launcher = Join-Path $LogDir "$name-run.cmd"
   Say 'RUN ' "$name" $name
-  '' | Set-Content -Path $log
+  if (Test-Path $log) { Remove-Item -Force $log -ErrorAction SilentlyContinue }
 
   $argList = New-Object System.Collections.Generic.List[string]
   if ($Svc.KafkaQuiet) {
@@ -191,13 +192,37 @@ function Start-OneService($Svc) {
   $argList.Add('-jar')
   $argList.Add($jar)
 
-  # cmd.exe merges stdout/stderr into one log; taskkill /T stops the java child.
+  # Quote every arg for cmd.exe. Empty -Dfoo= must be "-Dfoo=" or cmd drops the rest of the line.
   $quotedArgs = ($argList | ForEach-Object {
-    if ($_ -match '[\s"]') { '"' + ($_ -replace '"', '\"') + '"' } else { $_ }
+    '"' + ($_ -replace '"', '""') + '"'
   }) -join ' '
-  $cmdLine = "`"$Java`" $quotedArgs > `"$log`" 2>&1"
-  $p = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/c', $cmdLine) -WorkingDirectory $Root -WindowStyle Hidden -PassThru
+  $launcherLines = @(
+    '@echo off',
+    "cd /d `"$Root`"",
+    "`"$Java`" $quotedArgs > `"$log`" 2>&1"
+  )
+  Set-Content -LiteralPath $launcher -Value $launcherLines -Encoding ASCII
+  $p = Start-Process -FilePath $launcher -WorkingDirectory $Root -WindowStyle Hidden -PassThru
+  if (-not $p) {
+    Say 'FAIL' "Could not start $name" $name
+    return $false
+  }
   Set-Content -Path $pidFile -Value $p.Id
+
+  # Give the process a moment; refresh HasExited. Do not treat buffered (empty) logs as failure.
+  Start-Sleep -Seconds 3
+  $null = $p.Refresh()
+  if ($p.HasExited) {
+    $snippet = ''
+    if (Test-Path $log) {
+      $snippet = (Get-Content -LiteralPath $log -Raw -ErrorAction SilentlyContinue)
+      if ($snippet -and $snippet.Length -gt 400) { $snippet = $snippet.Substring(0, 400) }
+    }
+    if (-not $snippet) { $snippet = '(log empty — java failed before writing output)' }
+    Say 'FAIL' "$name exited immediately. $snippet" $name
+    return $false
+  }
+
   return (Wait-Port $Svc.Port $name)
 }
 
