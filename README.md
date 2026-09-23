@@ -64,17 +64,17 @@ Download a portable JDK 21, Maven, and fill a project-local dependency cache:
 prepare-offline.bat
 ```
 
-Then build the zip to copy:
+Then build the archive to copy:
 
 ```bat
 package-offline.bat
 ```
 
-That creates `eazybank-offline.zip` (typically ~0.5–1.5 GB). It includes source, scripts, `tools\jdk`, `tools\maven`, and `tools\m2`. `tools\` is gitignored; only the zip carries those binaries.
+That creates `eazybank-offline.tar` (typically ~0.5–1.5 GB). It includes source, scripts, `tools\jdk`, `tools\maven`, and `tools\m2`. `tools\` is gitignored; only the archive carries those binaries.
 
 ### 2. On the offline PC
 
-1. Copy and unzip `eazybank-offline.zip`.
+1. Copy and extract `eazybank-offline.tar` (for example `tar -xf eazybank-offline.tar`).
 2. Build (uses only the bundled cache; no network):
 
 ```bat
@@ -112,7 +112,7 @@ start-all.bat stop
 ### Offline development notes
 
 - Compile and run always go through `build.bat` / `start-all.bat` (or the bundled `tools\maven` with `-o`).
-- New Maven dependencies **cannot** be downloaded offline. Add them on an online PC, re-run `prepare-offline.bat`, and re-zip.
+- New Maven dependencies **cannot** be downloaded offline. Add them on an online PC, re-run `prepare-offline.bat`, and re-package.
 - IDE autocomplete works only if the Java language support is **already installed** in that IDE. Point Cursor / VS Code at the kit via [`.vscode/settings.json`](.vscode/settings.json). If the Java extension was never installed, use the IDE as an editor and Maven from `cmd`.
 
 ## Prerequisites (online / optional system install)

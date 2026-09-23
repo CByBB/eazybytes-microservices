@@ -144,6 +144,6 @@ del /s /q "%ROOT%\*\target\*.jar.original" >nul 2>&1
 
 echo.
 echo [DONE] Offline kit ready under tools\
-echo        Next: package-offline.bat  ^(or zip this folder including tools\^)
+echo        Next: package-offline.bat  ^(or archive this folder including tools\^)
 echo        On the offline PC: build.bat then start-all.bat
 exit /b 0

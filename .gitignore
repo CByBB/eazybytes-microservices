@@ -3,6 +3,8 @@ target/
 logs/
 tools/
 eazybank-offline.zip
+eazybank-offline.tar
+eazybank-offline.tar.gz
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
