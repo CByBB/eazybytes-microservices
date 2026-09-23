@@ -98,6 +98,14 @@ That starts every service in order and waits until each port is ready. Logs go t
 ./start-all.sh stop
 ```
 
+After the stack is up, call every OpenAPI operation through the gateway:
+
+```bash
+./test-all.sh
+```
+
+That covers accounts, cards, loans, customer details, message, gateway fallback, and every config-server path including encrypt/decrypt. It then checks that no documented operation was skipped. Use it after a Java or dependency change. It exits `0` if everything passed.
+
 ### Run each service separately
 
 Use a new terminal for each command, from the repo root, in this order. Wait until a service finishes starting before you start the next one.
