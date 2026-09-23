@@ -31,6 +31,7 @@ eazybank/
 ├── gatewayserver/
 ├── message/
 ├── tools/                  # portable JDK + Maven + m2 (created by prepare-offline.bat)
+├── scripts/                # internal helpers (not run by hand)
 ├── prepare-offline.bat
 ├── package-offline.bat
 ├── build.bat
@@ -166,27 +167,17 @@ build.bat
 start-all.bat
 ```
 
-### Git Bash (optional)
+That starts every service in order and waits until each port is ready. Logs go to `logs/`. Kafka messaging is off locally (there is no broker); accounts and message still start as normal HTTP services. Stop them with:
 
-If `tools/` is present, [start-all.sh](start-all.sh) uses the bundled JDK/Maven and offline repo. Otherwise it uses Scoop / system Maven:
-
-```bash
-./start-all.sh
-```
-
-That starts every service in order and waits until each port is ready. Logs go to `logs/`. Each log file is truncated on start and capped at 2MB. Kafka messaging is off locally (there is no broker); accounts and message still start as normal HTTP services. Stop them with:
-
-```bash
-./start-all.sh stop
+```bat
+start-all.bat stop
 ```
 
 After the stack is up, call every OpenAPI operation through the gateway:
 
-```bash
-./test-all.sh
+```bat
+test-all.bat
 ```
-
-On Windows without Git Bash, use `test-all.bat` instead.
 
 ### Run each service separately
 

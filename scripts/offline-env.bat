@@ -1,10 +1,9 @@
 @echo off
-rem Shared env for portable JDK + Maven under tools\
-rem Call with: call "%~dp0offline-env.bat"
-rem Sets ROOT, JAVA_HOME, MAVEN_HOME, MVN, and prepends PATH.
+rem Internal helper — not a user entry point. Called by build.bat / start-all.bat.
+rem Sets ROOT (repo root), JAVA_HOME, MAVEN_HOME, MVN, and prepends PATH.
 
-set "ROOT=%~dp0"
-if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
+set "ROOT=%~dp0.."
+for %%I in ("%ROOT%") do set "ROOT=%%~fI"
 
 set "JAVA_HOME=%ROOT%\tools\jdk"
 set "MAVEN_HOME=%ROOT%\tools\maven"

@@ -2,7 +2,7 @@
 setlocal EnableExtensions
 rem Offline build using bundled JDK, Maven, and tools\m2
 cd /d "%~dp0"
-call "%~dp0offline-env.bat" || exit /b 1
+call "%~dp0scripts\offline-env.bat" || exit /b 1
 
 echo.
 echo [RUN ] mvn -o clean install -DskipTests
