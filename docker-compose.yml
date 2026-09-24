@@ -1,0 +1,184 @@
+# Eazy Bank — Docker Compose (local / offline after docker load)
+# Requires fat jars under each module's target/ (mvn package or docker-prepare-offline.bat).
+
+name: eazybank
+
+x-eureka-client: &eureka-client
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+  EUREKA_INSTANCE_PREFERIPADDRESS: "false"
+  SPRING_CONFIG_IMPORT: optional:configserver:http://configserver:8071/
+
+services:
+  configserver:
+    image: eazybank/configserver:offline
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: configserver
+    ports:
+      - "8071:8071"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8071/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  eurekaserver:
+    image: eazybank/eurekaserver:offline
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: eurekaserver
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://configserver:8071/
+      EUREKA_CLIENT_REGISTERWITHEUREKA: "false"
+      EUREKA_CLIENT_FETCHREGISTRY: "false"
+    ports:
+      - "8070:8070"
+    depends_on:
+      configserver:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8070/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  accounts:
+    image: eazybank/accounts:offline
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: accounts
+    environment:
+      <<: *eureka-client
+      EUREKA_INSTANCE_HOSTNAME: accounts
+      JAVA_TOOL_OPTIONS: >-
+        -Dspring.cloud.function.autodetect=false
+        -Dspring.cloud.function.definition=
+        -Dlogging.level.org.apache.kafka=ERROR
+        -Dlogging.level.org.springframework.kafka=ERROR
+        -Dlogging.level.org.springframework.cloud.stream.binder.kafka=ERROR
+    ports:
+      - "8080:8080"
+    depends_on:
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 60s
+
+  cards:
+    image: eazybank/cards:offline
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: cards
+    environment:
+      <<: *eureka-client
+      EUREKA_INSTANCE_HOSTNAME: cards
+    ports:
+      - "9000:9000"
+    depends_on:
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 60s
+
+  loans:
+    image: eazybank/loans:offline
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: loans
+    environment:
+      <<: *eureka-client
+      EUREKA_INSTANCE_HOSTNAME: loans
+    ports:
+      - "8090:8090"
+    depends_on:
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8090/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 60s
+
+  message:
+    image: eazybank/message:offline
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: message
+    environment:
+      JAVA_TOOL_OPTIONS: >-
+        -Dspring.cloud.function.autodetect=false
+        -Dspring.cloud.function.definition=
+        -Dlogging.level.org.apache.kafka=ERROR
+        -Dlogging.level.org.springframework.kafka=ERROR
+        -Dlogging.level.org.springframework.cloud.stream.binder.kafka=ERROR
+    ports:
+      - "9010:9010"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9010/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  gatewayserver:
+    image: eazybank/gatewayserver:offline
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: gatewayserver
+    environment:
+      <<: *eureka-client
+      EUREKA_INSTANCE_HOSTNAME: gatewayserver
+      EAZYBANK_GATEWAY_MESSAGE_URI: http://message:9010
+      EAZYBANK_GATEWAY_CONFIGSERVER_URI: http://configserver:8071
+    ports:
+      - "8072:8072"
+    depends_on:
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+      accounts:
+        condition: service_healthy
+      cards:
+        condition: service_healthy
+      loans:
+        condition: service_healthy
+      message:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8072/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 60s

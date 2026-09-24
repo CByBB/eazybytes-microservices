@@ -1,5 +1,11 @@
 server:
   port: 8072
+
+eazybank:
+  gateway:
+    message-uri: ${EAZYBANK_GATEWAY_MESSAGE_URI:http://localhost:9010}
+    configserver-uri: ${EAZYBANK_GATEWAY_CONFIGSERVER_URI:http://localhost:8071}
+
 spring:
   application:
     name: "gatewayserver"

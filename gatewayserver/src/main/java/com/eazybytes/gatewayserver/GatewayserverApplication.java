@@ -5,6 +5,7 @@ import io.github.resilience4j.timelimiter.TimeLimiterConfig;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.servers.Server;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.circuitbreaker.resilience4j.ReactiveResilience4JCircuitBreakerFactory;
@@ -34,7 +35,9 @@ public class GatewayserverApplication {
 	}
 
 	@Bean
-	public RouteLocator eazyBankRouteConfig(RouteLocatorBuilder routeLocatorBuilder) {
+	public RouteLocator eazyBankRouteConfig(RouteLocatorBuilder routeLocatorBuilder,
+			@Value("${eazybank.gateway.message-uri:http://localhost:9010}") String messageUri,
+			@Value("${eazybank.gateway.configserver-uri:http://localhost:8071}") String configserverUri) {
 		return routeLocatorBuilder.routes()
 						.route(p -> p
 								.path("/eazybank/accounts/**")
@@ -59,11 +62,11 @@ public class GatewayserverApplication {
 					.route(p -> p
 							.path("/eazybank/message/**")
 							.filters(f -> f.rewritePath("/eazybank/message/(?<segment>.*)","/${segment}"))
-							.uri("http://localhost:9010"))
+							.uri(messageUri))
 					.route(p -> p
 							.path("/eazybank/configserver/**")
 							.filters(f -> f.rewritePath("/eazybank/configserver/(?<segment>.*)","/${segment}"))
-							.uri("http://localhost:8071"))
+							.uri(configserverUri))
 					.build();
 	}
 

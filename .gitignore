@@ -2,9 +2,15 @@ HELP.md
 target/
 logs/
 tools/
+.docker-package-staging/
+.offline-package-staging/
 eazybank-offline.zip
 eazybank-offline.tar
 eazybank-offline.tar.gz
+eazybank-docker-images.tar
+eazybank-docker-offline.zip
+eazybank-docker-offline.tar
+eazybank-docker-offline.tar.gz
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

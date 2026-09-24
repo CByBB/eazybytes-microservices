@@ -144,6 +144,8 @@ del /s /q "%ROOT%\*\target\*.jar.original" >nul 2>&1
 
 echo.
 echo [DONE] Offline kit ready under tools\
-echo        Next: package-offline.bat  ^(or archive this folder including tools\^)
+echo        Next: package-offline.bat
+echo              ^(one zip = source + tools + Docker images for offline develop AND run^)
 echo        On the offline PC: build.bat then start-all.bat
+echo                           OR docker-start.bat if Docker Desktop is installed
 exit /b 0
