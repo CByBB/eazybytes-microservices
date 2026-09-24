@@ -1,9 +1,9 @@
 @echo off
 setlocal EnableExtensions
-rem Build eazybank-offline.tar including tools\ for copy to an offline PC.
+rem Build eazybank-offline.tar.gz (gzip level 9) including tools\ for an offline PC.
 cd /d "%~dp0"
 set "ROOT=%CD%"
-set "ARCHIVE=%ROOT%\eazybank-offline.tar"
+set "ARCHIVE=%ROOT%\eazybank-offline.tar.gz"
 set "STAGING=%ROOT%\tools\package-staging"
 
 if not exist "%ROOT%\tools\jdk\bin\java.exe" (
@@ -19,14 +19,14 @@ if not exist "%ROOT%\tools\m2" (
   exit /b 1
 )
 
-where tar >nul 2>&1
-if errorlevel 1 (
-  echo [FAIL] tar.exe not found. Windows 10 includes tar; add it to PATH.
+set "TAR=%SystemRoot%\System32\tar.exe"
+if not exist "%TAR%" (
+  echo [FAIL] Windows tar.exe not found at %TAR%
   exit /b 1
 )
 
 echo.
-echo [RUN ] Packaging offline tar...
+echo [RUN ] Packaging offline tar.gz ^(gzip max compression^)...
 echo.
 
 if exist "%STAGING%" rmdir /s /q "%STAGING%"
@@ -41,14 +41,16 @@ if errorlevel 1 (
 )
 
 if exist "%ARCHIVE%" del /f /q "%ARCHIVE%"
-tar -cf "%ARCHIVE%" -C "%STAGING%" eazybank
+rem System32 tar — Git Bash GNU tar treats "C:\..." as a remote host.
+rem gzip:compression-level=9 = maximum gzip compression.
+"%TAR%" -czf "%ARCHIVE%" --options gzip:compression-level=9 -C "%STAGING%" eazybank
 if errorlevel 1 (
-  echo [FAIL] tar creation failed.
+  echo [FAIL] tar.gz creation failed.
   exit /b 1
 )
 
 rmdir /s /q "%STAGING%"
 
 for %%A in ("%ARCHIVE%") do echo [DONE] Created %%~fA ^(%%~zA bytes^)
-echo        Copy that archive to the offline PC, extract with tar -xf, then run build.bat and start-all.bat
+echo        Copy that archive to the offline PC, extract with tar -xzf, then run build.bat and start-all.bat
 exit /b 0

@@ -70,11 +70,11 @@ Then build the archive to copy:
 package-offline.bat
 ```
 
-That creates `eazybank-offline.tar` (typically ~0.5–1.5 GB). It includes source, scripts, `tools\jdk`, `tools\maven`, and `tools\m2`. `tools\` is gitignored; only the archive carries those binaries.
+That creates `eazybank-offline.tar.gz` with maximum gzip compression. It includes source, scripts, `tools\jdk`, `tools\maven`, and `tools\m2`. `tools\` is gitignored; only the archive carries those binaries.
 
 ### 2. On the offline PC
 
-1. Copy and extract `eazybank-offline.tar` (for example `tar -xf eazybank-offline.tar`).
+1. Copy and extract `eazybank-offline.tar.gz` (for example `tar -xzf eazybank-offline.tar.gz`).
 2. Build (uses only the bundled cache; no network):
 
 ```bat
