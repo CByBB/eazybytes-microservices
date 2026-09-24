@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-rem Online PC only: download portable JDK 21 + Maven, fill tools\m2, prove offline build.
+rem Online PC only: download portable JDK 8 + Maven, fill tools\m2, prove offline build.
 cd /d "%~dp0"
 set "ROOT=%CD%"
 set "TOOLS=%ROOT%\tools"
@@ -11,7 +11,7 @@ set "DOWNLOADS=%TOOLS%\downloads"
 set "ONLINE_SETTINGS=%ROOT%\.mvn\settings.xml"
 set "OFFLINE_SETTINGS=%ROOT%\.mvn\settings-offline.xml"
 
-set "JDK_URL=https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jdk/hotspot/normal/eclipse?project=jdk"
+set "JDK_URL=https://api.adoptium.net/v3/binary/latest/8/ga/windows/x64/jdk/hotspot/normal/eclipse?project=jdk"
 set "MAVEN_VERSION=3.9.9"
 set "MAVEN_URL=https://archive.apache.org/dist/maven/maven-3/%MAVEN_VERSION%/binaries/apache-maven-%MAVEN_VERSION%-bin.zip"
 
@@ -22,23 +22,31 @@ echo.
 if not exist "%DOWNLOADS%" mkdir "%DOWNLOADS%"
 if not exist "%TOOLS%" mkdir "%TOOLS%"
 
-rem --- JDK ---
+rem --- JDK 8 (bytecode targets 8; same jars run on JDK 8/11/17) ---
+set "NEED_JDK=1"
 if exist "%JDK_DIR%\bin\java.exe" (
-  echo [SKIP] JDK already present at tools\jdk
+  "%JDK_DIR%\bin\java.exe" -version 2>&1 | findstr /C:"1.8." >nul
+  if not errorlevel 1 set "NEED_JDK=0"
+)
+if "%NEED_JDK%"=="0" (
+  echo [SKIP] JDK 8 already present at tools\jdk
 ) else (
-  echo [RUN ] Downloading Temurin JDK 21...
+  if exist "%JDK_DIR%" (
+    echo [RUN ] Replacing tools\jdk with Temurin JDK 8...
+    rmdir /s /q "%JDK_DIR%"
+  )
+  echo [RUN ] Downloading Temurin JDK 8...
   powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri '%JDK_URL%' -OutFile '%DOWNLOADS%\jdk21.zip'"
+    "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri '%JDK_URL%' -OutFile '%DOWNLOADS%\jdk8.zip'"
   if errorlevel 1 (
     echo [FAIL] JDK download failed.
     exit /b 1
   )
   echo [RUN ] Extracting JDK...
-  if exist "%JDK_DIR%" rmdir /s /q "%JDK_DIR%"
   if exist "%DOWNLOADS%\jdk-extract" rmdir /s /q "%DOWNLOADS%\jdk-extract"
   mkdir "%DOWNLOADS%\jdk-extract"
   powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "Expand-Archive -Path '%DOWNLOADS%\jdk21.zip' -DestinationPath '%DOWNLOADS%\jdk-extract' -Force"
+    "Expand-Archive -Path '%DOWNLOADS%\jdk8.zip' -DestinationPath '%DOWNLOADS%\jdk-extract' -Force"
   if errorlevel 1 (
     echo [FAIL] JDK extract failed.
     exit /b 1
@@ -52,9 +60,9 @@ if exist "%JDK_DIR%\bin\java.exe" (
     echo [FAIL] java.exe not found after extract.
     exit /b 1
   )
-  del /f /q "%DOWNLOADS%\jdk21.zip" >nul 2>&1
+  del /f /q "%DOWNLOADS%\jdk8.zip" >nul 2>&1
   if exist "%DOWNLOADS%\jdk-extract" rmdir /s /q "%DOWNLOADS%\jdk-extract"
-  echo [DONE] JDK ready
+  echo [DONE] JDK 8 ready
 )
 
 rem --- Maven ---
@@ -145,7 +153,7 @@ del /s /q "%ROOT%\*\target\*.jar.original" >nul 2>&1
 echo.
 echo [DONE] Offline kit ready under tools\
 echo        Next: package-offline.bat
-echo              ^(one zip = source + tools + Docker images for offline develop AND run^)
+echo              ^(one .tar = source + tools + Docker images for offline develop AND run^)
 echo        On the offline PC: build.bat then start-all.bat
 echo                           OR docker-start.bat if Docker Desktop is installed
 exit /b 0

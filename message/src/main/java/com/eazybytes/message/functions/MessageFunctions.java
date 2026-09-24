@@ -27,7 +27,7 @@ public class MessageFunctions {
     public Function<AccountsMsgDto,Long> sms() {
         return accountsMsgDto -> {
             log.info("Sending sms with the details : " +  accountsMsgDto.toString());
-            return accountsMsgDto.accountNumber();
+            return accountsMsgDto.getAccountNumber();
         };
     }
 

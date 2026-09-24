@@ -33,7 +33,7 @@ management:
       enabled: true
   endpoint:
     shutdown:
-      access: unrestricted
+      enabled: true
     health:
       probes:
         enabled: true

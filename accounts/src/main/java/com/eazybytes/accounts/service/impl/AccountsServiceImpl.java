@@ -57,7 +57,7 @@ public class AccountsServiceImpl  implements IAccountsService {
     }
 
     private void sendCommunication(Accounts account, Customer customer) {
-        var accountsMsgDto = new AccountsMsgDto(account.getAccountNumber(), customer.getName(),
+        AccountsMsgDto accountsMsgDto = new AccountsMsgDto(account.getAccountNumber(), customer.getName(),
                 customer.getEmail(), customer.getMobileNumber());
         if (streamBridge == null) {
             log.info("Skipping communication event; messaging is disabled");
@@ -65,7 +65,7 @@ public class AccountsServiceImpl  implements IAccountsService {
         }
         log.info("Sending Communication request for the details: {}", accountsMsgDto);
         try {
-            var result = streamBridge.send("sendCommunication-out-0", accountsMsgDto);
+            boolean result = streamBridge.send("sendCommunication-out-0", accountsMsgDto);
             log.info("Is the Communication request successfully triggered ? : {}", result);
         } catch (Exception ex) {
             log.warn("Skipping communication event; Kafka is not available: {}", ex.getMessage());

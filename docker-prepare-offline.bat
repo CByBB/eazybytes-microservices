@@ -24,7 +24,7 @@ if errorlevel 1 (
   if exist "%~dp0build.bat" if exist "%~dp0tools\maven\bin\mvn.cmd" (
     echo [INFO] System Maven missing; will use build.bat / tools\ after this check.
   ) else (
-    echo [FAIL] Maven not found on PATH. Install Maven 3.9+ and Java 21, or run prepare-offline.bat first.
+    echo [FAIL] Maven not found on PATH. Install Maven 3.9+ and Java 8+, or run prepare-offline.bat first.
     exit /b 1
   )
 )
@@ -58,7 +58,7 @@ for %%S in (configserver eurekaserver accounts cards loans message gatewayserver
 echo.
 echo [RUN ] docker compose build...
 echo.
-docker pull eclipse-temurin:21-jre-jammy
+docker pull eclipse-temurin:8-jre-jammy
 docker compose build
 if errorlevel 1 (
   echo [FAIL] docker compose build failed ^(needs network for base image the first time^).
@@ -69,8 +69,8 @@ echo.
 echo [RUN ] Saving images to eazybank-docker-images.tar ...
 echo.
 set "SAVE_LIST=eazybank/configserver:offline eazybank/eurekaserver:offline eazybank/accounts:offline eazybank/cards:offline eazybank/loans:offline eazybank/message:offline eazybank/gatewayserver:offline"
-docker image inspect eclipse-temurin:21-jre-jammy >nul 2>&1
-if not errorlevel 1 set "SAVE_LIST=eclipse-temurin:21-jre-jammy %SAVE_LIST%"
+docker image inspect eclipse-temurin:8-jre-jammy >nul 2>&1
+if not errorlevel 1 set "SAVE_LIST=eclipse-temurin:8-jre-jammy %SAVE_LIST%"
 
 docker save -o "%IMAGES%" %SAVE_LIST%
 if errorlevel 1 (

@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -16,10 +18,10 @@ public class MessageController {
     @GetMapping("/info")
     @Operation(summary = "Message service status")
     public Map<String, Object> info() {
-        return Map.of(
-                "service", "message",
-                "messagingEnabled", false,
-                "note", "Kafka is disabled locally. This service stays up as an HTTP app."
-        );
+        Map<String, Object> body = new LinkedHashMap<String, Object>();
+        body.put("service", "message");
+        body.put("messagingEnabled", false);
+        body.put("note", "Kafka is disabled locally. This service stays up as an HTTP app.");
+        return Collections.unmodifiableMap(body);
     }
 }

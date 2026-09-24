@@ -11,10 +11,12 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 public class SecurityConfig {
 
     @Bean
-    public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity serverHttpSecurity) {
-        return serverHttpSecurity
-                .authorizeExchange(exchanges -> exchanges.anyExchange().permitAll())
-                .csrf(ServerHttpSecurity.CsrfSpec::disable)
+    public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+        return http
+                .authorizeExchange()
+                    .anyExchange().permitAll()
+                .and()
+                .csrf().disable()
                 .build();
     }
 }

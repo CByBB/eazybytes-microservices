@@ -1,6 +1,6 @@
 package com.eazybytes.accounts.entity;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 import lombok.*;
 
 @Entity

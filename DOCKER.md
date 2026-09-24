@@ -74,6 +74,7 @@ Inside Compose, services talk via Docker DNS (`configserver`, `eurekaserver`, â€
 
 ## Notes
 
-- First build on the online PC needs network to pull `eclipse-temurin:21-jre-jammy`.
+- First build on the online PC needs network to pull `eclipse-temurin:8-jre-jammy`.
+- App bytecode is **Java 8** (Spring Boot 2.7); the same images run on any host Docker with that JRE base.
 - Kafka messaging is off (no broker); accounts and message still run as HTTP services.
 - After code changes offline: rebuild with `build.bat` + `start-all.bat`, **or** rebuild jars then `docker compose build` (base image must already be loaded from the tar).

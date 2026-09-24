@@ -1,6 +1,6 @@
 # Shared image for every Eazy Bank service. Build with:
 #   docker build -f Dockerfile --build-arg SERVICE=accounts -t eazybank/accounts:offline .
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:8-jre-jammy
 
 WORKDIR /app
 

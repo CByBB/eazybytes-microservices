@@ -13,15 +13,14 @@ spring:
     import: "optional:configserver:http://localhost:8071/"
   cloud:
     gateway:
-      server:
-        webflux:
-          discovery:
-            locator:
-              enabled: false
-              lowerCaseServiceId: true
-          httpclient:
-            connect-timeout: 1000
-            response-timeout: 10s
+      discovery:
+        locator:
+          enabled: false
+          lower-case-service-id: true
+      httpclient:
+        connect-timeout: 1000
+        response-timeout: 10s
+
 management:
   endpoints:
     web:
@@ -29,7 +28,7 @@ management:
         include: "*"
   endpoint:
     gateway:
-      access: unrestricted
+      enabled: true
   info:
     env:
       enabled: true
