@@ -25,14 +25,14 @@ $ErrorActionPreference = 'Stop'
 $Root = if ($env:EAZYBANK_ROOT) { $env:EAZYBANK_ROOT } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 Set-Location $Root
 
-$JavaHome = Join-Path $Root 'tools\jdk'
+$JavaHome = if ($env:JAVA_HOME) { $env:JAVA_HOME } else { Join-Path $Root 'tools\jdk-8' }
 $Java = Join-Path $JavaHome 'bin\java.exe'
 $LogDir = Join-Path $Root 'logs'
 if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir | Out-Null }
 
 if (-not (Test-Path $Java)) {
-  Write-Host '[FAIL] Bundled JDK not found at tools\jdk' -ForegroundColor Red
-  Write-Host '       On an online PC run prepare-offline.bat first, then copy the whole folder.'
+  Write-Host "[FAIL] Bundled JDK not found at $JavaHome" -ForegroundColor Red
+  Write-Host '       Expected tools\jdk-8 (default), or set EAZYBANK_JAVA_VERSION=11|17.'
   exit 1
 }
 

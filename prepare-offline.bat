@@ -1,17 +1,15 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-rem Online PC only: download portable JDK 8 + Maven, fill tools\m2, prove offline build.
+rem Online PC only: download portable JDK 8+11+17 + Maven, fill tools\m2, prove offline build.
 cd /d "%~dp0"
 set "ROOT=%CD%"
 set "TOOLS=%ROOT%\tools"
-set "JDK_DIR=%TOOLS%\jdk"
 set "MAVEN_DIR=%TOOLS%\maven"
 set "M2_REPO=%TOOLS%\m2"
 set "DOWNLOADS=%TOOLS%\downloads"
 set "ONLINE_SETTINGS=%ROOT%\.mvn\settings.xml"
 set "OFFLINE_SETTINGS=%ROOT%\.mvn\settings-offline.xml"
 
-set "JDK_URL=https://api.adoptium.net/v3/binary/latest/8/ga/windows/x64/jdk/hotspot/normal/eclipse?project=jdk"
 set "MAVEN_VERSION=3.9.9"
 set "MAVEN_URL=https://archive.apache.org/dist/maven/maven-3/%MAVEN_VERSION%/binaries/apache-maven-%MAVEN_VERSION%-bin.zip"
 
@@ -22,48 +20,18 @@ echo.
 if not exist "%DOWNLOADS%" mkdir "%DOWNLOADS%"
 if not exist "%TOOLS%" mkdir "%TOOLS%"
 
-rem --- JDK 8 (bytecode targets 8; same jars run on JDK 8/11/17) ---
-set "NEED_JDK=1"
-if exist "%JDK_DIR%\bin\java.exe" (
-  "%JDK_DIR%\bin\java.exe" -version 2>&1 | findstr /C:"1.8." >nul
-  if not errorlevel 1 set "NEED_JDK=0"
+rem Migrate legacy tools\jdk (single folder) -> tools\jdk-8
+if exist "%TOOLS%\jdk\bin\java.exe" if not exist "%TOOLS%\jdk-8\bin\java.exe" (
+  echo [RUN ] Moving legacy tools\jdk to tools\jdk-8...
+  move "%TOOLS%\jdk" "%TOOLS%\jdk-8" >nul
 )
-if "%NEED_JDK%"=="0" (
-  echo [SKIP] JDK 8 already present at tools\jdk
-) else (
-  if exist "%JDK_DIR%" (
-    echo [RUN ] Replacing tools\jdk with Temurin JDK 8...
-    rmdir /s /q "%JDK_DIR%"
-  )
-  echo [RUN ] Downloading Temurin JDK 8...
-  powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri '%JDK_URL%' -OutFile '%DOWNLOADS%\jdk8.zip'"
-  if errorlevel 1 (
-    echo [FAIL] JDK download failed.
-    exit /b 1
-  )
-  echo [RUN ] Extracting JDK...
-  if exist "%DOWNLOADS%\jdk-extract" rmdir /s /q "%DOWNLOADS%\jdk-extract"
-  mkdir "%DOWNLOADS%\jdk-extract"
-  powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "Expand-Archive -Path '%DOWNLOADS%\jdk8.zip' -DestinationPath '%DOWNLOADS%\jdk-extract' -Force"
-  if errorlevel 1 (
-    echo [FAIL] JDK extract failed.
-    exit /b 1
-  )
-  for /d %%D in ("%DOWNLOADS%\jdk-extract\*") do (
-    move "%%D" "%JDK_DIR%" >nul
-    goto :jdk_moved
-  )
-  :jdk_moved
-  if not exist "%JDK_DIR%\bin\java.exe" (
-    echo [FAIL] java.exe not found after extract.
-    exit /b 1
-  )
-  del /f /q "%DOWNLOADS%\jdk8.zip" >nul 2>&1
-  if exist "%DOWNLOADS%\jdk-extract" rmdir /s /q "%DOWNLOADS%\jdk-extract"
-  echo [DONE] JDK 8 ready
-)
+
+call :ensure_jdk 8
+if errorlevel 1 exit /b 1
+call :ensure_jdk 11
+if errorlevel 1 exit /b 1
+call :ensure_jdk 17
+if errorlevel 1 exit /b 1
 
 rem --- Maven ---
 if exist "%MAVEN_DIR%\bin\mvn.cmd" (
@@ -100,12 +68,15 @@ if exist "%MAVEN_DIR%\bin\mvn.cmd" (
   echo [DONE] Maven ready
 )
 
-set "JAVA_HOME=%JDK_DIR%"
+rem Build/proof with JDK 8 (bytecode target is 1.8)
+set "JAVA_HOME=%TOOLS%\jdk-8"
 set "MAVEN_HOME=%MAVEN_DIR%"
 set "PATH=%JAVA_HOME%\bin;%MAVEN_HOME%\bin;%PATH%"
 set "MVN=%MAVEN_HOME%\bin\mvn.cmd"
 
 echo.
+echo [INFO] JDKs: tools\jdk-8 , tools\jdk-11 , tools\jdk-17
+echo [INFO] Using JDK 8 for Maven build ^(project bytecode is Java 8^)
 "%JAVA_HOME%\bin\java.exe" -version
 call "%MVN%" -version
 echo.
@@ -152,8 +123,47 @@ del /s /q "%ROOT%\*\target\*.jar.original" >nul 2>&1
 
 echo.
 echo [DONE] Offline kit ready under tools\
+echo        JDKs: tools\jdk-8  tools\jdk-11  tools\jdk-17
 echo        Next: package-offline.bat
-echo              ^(one .tar = source + tools + Docker images for offline develop AND run^)
-echo        On the offline PC: build.bat then start-all.bat
-echo                           OR docker-start.bat if Docker Desktop is installed
+exit /b 0
+
+rem ---------------------------------------------------------------------------
+rem :ensure_jdk <majorVersion>
+rem Downloads Temurin JDK into tools\jdk-<ver> when missing.
+rem ---------------------------------------------------------------------------
+:ensure_jdk
+set "JDK_VER=%~1"
+set "JDK_DIR=%TOOLS%\jdk-%JDK_VER%"
+set "JDK_ZIP=%DOWNLOADS%\jdk%JDK_VER%.zip"
+set "JDK_URL=https://api.adoptium.net/v3/binary/latest/%JDK_VER%/ga/windows/x64/jdk/hotspot/normal/eclipse?project=jdk"
+
+if exist "%JDK_DIR%\bin\java.exe" (
+  echo [SKIP] JDK %JDK_VER% already present at tools\jdk-%JDK_VER%
+  exit /b 0
+)
+
+echo [RUN ] Downloading Temurin JDK %JDK_VER%...
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri '%JDK_URL%' -OutFile '%JDK_ZIP%'"
+if errorlevel 1 (
+  echo [FAIL] JDK %JDK_VER% download failed.
+  exit /b 1
+)
+echo [RUN ] Extracting JDK %JDK_VER%...
+if exist "%JDK_DIR%" rmdir /s /q "%JDK_DIR%"
+if exist "%DOWNLOADS%\jdk-extract-%JDK_VER%" rmdir /s /q "%DOWNLOADS%\jdk-extract-%JDK_VER%"
+mkdir "%DOWNLOADS%\jdk-extract-%JDK_VER%"
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$ProgressPreference='SilentlyContinue'; Expand-Archive -Path '%JDK_ZIP%' -DestinationPath '%DOWNLOADS%\jdk-extract-%JDK_VER%' -Force; $src = Get-ChildItem -Path '%DOWNLOADS%\jdk-extract-%JDK_VER%' -Directory | Select-Object -First 1; if (-not $src) { throw 'No JDK folder in zip' }; New-Item -ItemType Directory -Force -Path '%JDK_DIR%' | Out-Null; Copy-Item -Path (Join-Path $src.FullName '*') -Destination '%JDK_DIR%' -Recurse -Force"
+if errorlevel 1 (
+  echo [FAIL] JDK %JDK_VER% extract failed.
+  exit /b 1
+)
+if not exist "%JDK_DIR%\bin\java.exe" (
+  echo [FAIL] java.exe not found after extracting JDK %JDK_VER%.
+  exit /b 1
+)
+del /f /q "%JDK_ZIP%" >nul 2>&1
+if exist "%DOWNLOADS%\jdk-extract-%JDK_VER%" rmdir /s /q "%DOWNLOADS%\jdk-extract-%JDK_VER%"
+echo [DONE] JDK %JDK_VER% ready at tools\jdk-%JDK_VER%
 exit /b 0

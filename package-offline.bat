@@ -8,8 +8,16 @@ set "IMAGES=%ROOT%\eazybank-docker-images.tar"
 set "ARCHIVE=%ROOT%\eazybank-offline.tar"
 set "STAGING=%ROOT%\.offline-package-staging"
 
-if not exist "%ROOT%\tools\jdk\bin\java.exe" (
-  echo [FAIL] tools\jdk missing. Run prepare-offline.bat first.
+if not exist "%ROOT%\tools\jdk-8\bin\java.exe" (
+  echo [FAIL] tools\jdk-8 missing. Run prepare-offline.bat first.
+  exit /b 1
+)
+if not exist "%ROOT%\tools\jdk-11\bin\java.exe" (
+  echo [FAIL] tools\jdk-11 missing. Run prepare-offline.bat first.
+  exit /b 1
+)
+if not exist "%ROOT%\tools\jdk-17\bin\java.exe" (
+  echo [FAIL] tools\jdk-17 missing. Run prepare-offline.bat first.
   exit /b 1
 )
 if not exist "%ROOT%\tools\maven\bin\mvn.cmd" (
@@ -95,8 +103,16 @@ if errorlevel 1 (
   exit /b 1
 )
 
-if not exist "%STAGING%\eazybank\tools\jdk\bin\java.exe" (
-  echo [FAIL] Staged package is missing tools\jdk
+if not exist "%STAGING%\eazybank\tools\jdk-8\bin\java.exe" (
+  echo [FAIL] Staged package is missing tools\jdk-8
+  exit /b 1
+)
+if not exist "%STAGING%\eazybank\tools\jdk-11\bin\java.exe" (
+  echo [FAIL] Staged package is missing tools\jdk-11
+  exit /b 1
+)
+if not exist "%STAGING%\eazybank\tools\jdk-17\bin\java.exe" (
+  echo [FAIL] Staged package is missing tools\jdk-17
   exit /b 1
 )
 if not exist "%STAGING%\eazybank\eazybank-docker-images.tar" (

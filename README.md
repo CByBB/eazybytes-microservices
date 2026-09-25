@@ -13,7 +13,7 @@ Caller
     → configserver  (8071)  central config
 ```
 
-The app targets **Java 8** bytecode (**Spring Boot 2.7**). The same JARs run on **JDK 8, 11, and 17**. This package includes a portable JDK 8 and Maven under `tools/` (no system Java install required for the non-Docker path).
+The app targets **Java 8** bytecode (**Spring Boot 2.7**). The same JARs run on **JDK 8, 11, and 17**. This package includes portable **JDK 8, 11, and 17** plus Maven under `tools/` (no system Java install required for the non-Docker path).
 
 ## Services
 
@@ -31,9 +31,17 @@ Each business service uses an in-memory H2 database.
 
 ## Run without Docker
 
-Uses the bundled JDK/Maven under `tools/`.
+Uses the bundled JDKs/Maven under `tools/` (`jdk-8`, `jdk-11`, `jdk-17`). Default is **JDK 8**. To use another:
 
-1. Open this folder in your IDE (`.vscode/settings.json` points at `tools/` when present).
+```bat
+set EAZYBANK_JAVA_VERSION=11
+build.bat
+start-all.bat
+```
+
+(`EAZYBANK_JAVA_VERSION` may be `8`, `11`, or `17`.)
+
+1. Open this folder in your IDE (`.vscode/settings.json` lists all three JDKs; default is 8).
 2. Build, then start every service:
 
 ```bat
@@ -112,7 +120,12 @@ eazybank/
 ├── eazy-bom/
 ├── accounts/ cards/ loans/ message/
 ├── configserver/ eurekaserver/ gatewayserver/
-├── tools/                 # portable JDK 8 + Maven + local m2
+├── tools/                 # portable JDK 8/11/17 + Maven + local m2
+│   ├── jdk-8/
+│   ├── jdk-11/
+│   ├── jdk-17/
+│   ├── maven/
+│   └── m2/
 ├── scripts/               # internal helpers (used by build/start)
 ├── build.bat
 ├── start-all.bat / stop-all.bat
