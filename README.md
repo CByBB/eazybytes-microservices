@@ -13,105 +13,9 @@ Caller
     → configserver  (8071)  central config
 ```
 
-**Images do not contain source.** Docker images are compiled JARs only.
+The app targets **Java 8** bytecode (**Spring Boot 2.7**). The same JARs run on **JDK 8, 11, and 17**. This package includes a portable JDK 8 and Maven under `tools/` (no system Java install required for the non-Docker path).
 
-The app targets **Java 8** bytecode (**Spring Boot 2.7**). The same JARs run on **JDK 8, 11, and 17**. The offline kit bundles **JDK 8** under `tools/` for develop/run without a system install.
-
-For **offline development** (edit + rebuild + run) you need `tools/` — that is what `eazybank-offline.tar` is for. Docker is an optional second way to *run* the stack.
-
-## Offline portable kit (recommended)
-
-One `.tar` covers **edit + rebuild** and **Docker run** on a Windows PC with no network.
-
-### Online PC (once)
-
-```bat
-prepare-offline.bat
-package-offline.bat
-```
-
-Creates **`eazybank-offline.tar`** = project SOURCE + `tools/` (JDK 8, Maven, local `m2`) + `eazybank-docker-images.tar` + compose/scripts.
-
-Copy **only that `.tar`** to the offline PC.
-
-### Offline PC — develop (no Docker required)
-
-1. Extract: `tar -xf eazybank-offline.tar`
-2. Open the `eazybank` folder in Cursor / VS Code / IntelliJ (`.vscode/settings.json` points at `tools/`)
-3. After code changes:
-
-```bat
-build.bat
-start-all.bat
-```
-
-Stop:
-
-```bat
-start-all.bat stop
-```
-
-or `stop-all.bat`. API regression (stack must be up): `test-all.bat`.
-
-### Offline PC — run with Docker (optional)
-
-Requires Docker Desktop already installed.
-
-```bat
-docker-start.bat
-```
-
-Stop: `docker-stop.bat`. Details: [DOCKER.md](DOCKER.md).
-
-## Scripts (`.bat` files)
-
-### Online PC — prepare the delivery
-
-| Script | What it does |
-|---|---|
-| **`prepare-offline.bat`** | Downloads portable JDK 8 and Maven into `tools/`, fills the local Maven cache (`tools/m2`), and proves an offline build works. Needs network. Run this first. |
-| **`package-offline.bat`** | Builds jars with `tools/`, builds and saves Docker images, then packs **source + `tools/` + images + scripts** into **`eazybank-offline.tar`**. This is the file to copy to the offline PC. |
-| **`docker-prepare-offline.bat`** | Optional. Builds a Docker-only `.tar` (source + images, **no** `tools/`). Prefer `package-offline.bat` when offline rebuild is required. |
-
-### Offline PC — develop and run without Docker
-
-| Script | What it does |
-|---|---|
-| **`build.bat`** | Compiles the project offline using bundled JDK/Maven and `tools/m2` (`mvn -o`). Run after code changes. |
-| **`start-all.bat`** | Starts every service as a Java process (no Docker), in order, and waits until ports are ready. Logs go under `logs/`. |
-| **`start-all.bat stop`** | Stops all services started by `start-all.bat`. |
-| **`stop-all.bat`** | Same as `start-all.bat stop`. |
-| **`test-all.bat`** | Runs API checks through the gateway. The stack must already be up. |
-
-### Offline PC — run with Docker
-
-| Script | What it does |
-|---|---|
-| **`docker-start.bat`** | Loads `eazybank-docker-images.tar` if images are missing, then starts the stack with `docker compose up -d`. Needs Docker Desktop. |
-| **`docker-stop.bat`** | Stops the Docker Compose stack (`docker compose down`). |
-
-`scripts/offline-env.bat` is an internal helper used by `build.bat` and `start-all.bat` to point at `tools/`. Do not run it by hand.
-
-## Repository layout
-
-```
-eazybank/
-├── pom.xml
-├── eazy-bom/
-├── accounts/ cards/ loans/ message/
-├── configserver/ eurekaserver/ gatewayserver/
-├── tools/                      # JDK 8 + Maven + m2 (from prepare-offline; not in git)
-├── scripts/                    # internal helpers (offline-env.bat)
-├── prepare-offline.bat
-├── package-offline.bat
-├── build.bat
-├── start-all.bat / stop-all.bat
-├── test-all.bat
-├── Dockerfile / docker-compose.yml
-├── docker-prepare-offline.bat
-├── docker-start.bat / docker-stop.bat
-└── DOCKER.md
-```
+## Services
 
 | Service | Role |
 |---|---|
@@ -124,6 +28,66 @@ eazybank/
 | **message** | Async notifications |
 
 Each business service uses an in-memory H2 database.
+
+## Run without Docker
+
+Uses the bundled JDK/Maven under `tools/`.
+
+1. Open this folder in your IDE (`.vscode/settings.json` points at `tools/` when present).
+2. Build, then start every service:
+
+```bat
+build.bat
+start-all.bat
+```
+
+Stop:
+
+```bat
+start-all.bat stop
+```
+
+or `stop-all.bat`.
+
+After code changes, run `build.bat` again, then restart with `start-all.bat stop` and `start-all.bat`.
+
+Optional API check (stack must be up; wait about a minute after start so Eureka is ready):
+
+```bat
+test-all.bat
+```
+
+| Script | What it does |
+|---|---|
+| **`build.bat`** | Compiles with bundled JDK/Maven (`tools/`) |
+| **`start-all.bat`** | Starts all services as Java processes, waits until ports are ready. Logs under `logs/` |
+| **`start-all.bat stop`** / **`stop-all.bat`** | Stops those processes |
+| **`test-all.bat`** | API checks through the gateway |
+
+## Run with Docker
+
+Requires **Docker Desktop** (or Docker Engine) already installed.
+
+```bat
+docker-start.bat
+```
+
+Loads `eazybank-docker-images.tar` if images are not present yet, then starts the stack.
+
+Stop:
+
+```bat
+docker-stop.bat
+```
+
+Do not run `start-all.bat` and Docker at the same time (same host ports). After `docker-start.bat`, wait until the gateway is healthy before `test-all.bat`.
+
+More Compose notes: [DOCKER.md](DOCKER.md).
+
+| Script | What it does |
+|---|---|
+| **`docker-start.bat`** | Load images if needed, then `docker compose up -d` |
+| **`docker-stop.bat`** | `docker compose down` |
 
 ## Local URLs
 
@@ -140,6 +104,25 @@ Each business service uses an in-memory H2 database.
 
 Import `Microservices.postman_collection.json` for sample API calls. Gateway routes are open.
 
+## Repository layout
+
+```
+eazybank/
+├── pom.xml
+├── eazy-bom/
+├── accounts/ cards/ loans/ message/
+├── configserver/ eurekaserver/ gatewayserver/
+├── tools/                 # portable JDK 8 + Maven + local m2
+├── scripts/               # internal helpers (used by build/start)
+├── build.bat
+├── start-all.bat / stop-all.bat
+├── test-all.bat
+├── Dockerfile / docker-compose.yml
+├── eazybank-docker-images.tar
+├── docker-start.bat / docker-stop.bat
+└── DOCKER.md
+```
+
 ## Config
 
-Each service loads optional config from the config server. Profile files live in `configserver/src/main/resources/config/`. Config is native classpath (no Git remote), so it works offline.
+Each service can load optional config from the config server. Profile files live in `configserver/src/main/resources/config/` (native classpath; no Git remote).

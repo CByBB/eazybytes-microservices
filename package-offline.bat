@@ -88,7 +88,7 @@ if errorlevel 1 (
 )
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$root='%ROOT%'; $dest='%STAGING%\eazybank'; $excludeDirs = @('.git','logs','.offline-package-staging','.docker-package-staging','tools\downloads','tools\package-staging'); $excludeNames = @('eazybank-offline.zip','eazybank-offline.tar','eazybank-offline.tar.gz','eazybank-docker-offline.zip','eazybank-docker-offline.tar','eazybank-docker-offline.tar.gz'); function ShouldSkip($full) { $rel = $full.Substring($root.Length).TrimStart('\'); foreach ($d in $excludeDirs) { if ($rel -eq $d -or $rel.StartsWith($d + '\')) { return $true } }; if ($rel -match '\\target\\') { return $true }; if ($rel -eq 'target' -or $rel.EndsWith('\target')) { return $true }; $name = Split-Path $full -Leaf; if ($excludeNames -contains $name) { return $true }; return $false }; Get-ChildItem -Path $root -Recurse -Force | Where-Object { -not (ShouldSkip $_.FullName) } | ForEach-Object { $rel = $_.FullName.Substring($root.Length).TrimStart('\'); $target = Join-Path $dest $rel; if ($_.PSIsContainer) { New-Item -ItemType Directory -Force -Path $target | Out-Null } else { $parent = Split-Path $target -Parent; if (-not (Test-Path $parent)) { New-Item -ItemType Directory -Force -Path $parent | Out-Null }; Copy-Item -Force $_.FullName $target } }; Write-Host '[DONE] Staging complete'"
+  "$root='%ROOT%'; $dest='%STAGING%\eazybank'; $excludeDirs = @('.git','logs','.offline-package-staging','.docker-package-staging','tools\downloads','tools\package-staging'); $excludeNames = @('eazybank-offline.zip','eazybank-offline.tar','eazybank-offline.tar.gz','eazybank-docker-offline.zip','eazybank-docker-offline.tar','eazybank-docker-offline.tar.gz','prepare-offline.bat','package-offline.bat','docker-prepare-offline.bat'); function ShouldSkip($full) { $rel = $full.Substring($root.Length).TrimStart('\'); foreach ($d in $excludeDirs) { if ($rel -eq $d -or $rel.StartsWith($d + '\')) { return $true } }; if ($rel -match '\\target\\') { return $true }; if ($rel -eq 'target' -or $rel.EndsWith('\target')) { return $true }; $name = Split-Path $full -Leaf; if ($excludeNames -contains $name) { return $true }; return $false }; Get-ChildItem -Path $root -Recurse -Force | Where-Object { -not (ShouldSkip $_.FullName) } | ForEach-Object { $rel = $_.FullName.Substring($root.Length).TrimStart('\'); $target = Join-Path $dest $rel; if ($_.PSIsContainer) { New-Item -ItemType Directory -Force -Path $target | Out-Null } else { $parent = Split-Path $target -Parent; if (-not (Test-Path $parent)) { New-Item -ItemType Directory -Force -Path $parent | Out-Null }; Copy-Item -Force $_.FullName $target } }; Write-Host '[DONE] Staging complete'"
 
 if errorlevel 1 (
   echo [FAIL] Staging failed.
@@ -113,6 +113,19 @@ if not exist "%STAGING%\eazybank\start-all.bat" (
 )
 if not exist "%STAGING%\eazybank\docker-start.bat" (
   echo [FAIL] Staged package is missing docker-start.bat
+  exit /b 1
+)
+
+if exist "%STAGING%\eazybank\prepare-offline.bat" (
+  echo [FAIL] Online-only prepare-offline.bat must not be in the offline package.
+  exit /b 1
+)
+if exist "%STAGING%\eazybank\package-offline.bat" (
+  echo [FAIL] Online-only package-offline.bat must not be in the offline package.
+  exit /b 1
+)
+if exist "%STAGING%\eazybank\docker-prepare-offline.bat" (
+  echo [FAIL] Online-only docker-prepare-offline.bat must not be in the offline package.
   exit /b 1
 )
 

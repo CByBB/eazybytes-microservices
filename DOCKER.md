@@ -1,42 +1,20 @@
-# Docker offline package
+# Docker notes
 
-**Docker images do not contain source code.** They only contain compiled Spring Boot JARs ready to run.
+Docker images are compiled Spring Boot JARs (not source). They are an optional way to run the stack.
 
-| Package | Contents | Offline develop (edit + rebuild)? | Offline run? |
-|---|---|---|---|
-| `eazybank-offline.tar` via **`package-offline.bat`** | SOURCE + `tools/` + image tar + scripts | **Yes** (`build.bat` / `start-all.bat`) | Yes — jars *or* Docker |
-| `eazybank-docker-offline.tar` via `docker-prepare-offline.bat` | SOURCE + image tar (**no** `tools/`) | No (cannot rebuild without JDK/Maven) | Yes — Docker only |
-| `eazybank-docker-images.tar` alone | Images only | No | Only with compose scripts |
+## Start / stop
 
-Prefer **`package-offline.bat`** so one `.tar` supports both development and Docker run. See [README.md](README.md).
-
-## Online PC — full kit (recommended)
-
-```bat
-prepare-offline.bat
-package-offline.bat
-```
-
-That builds jars with bundled Maven, builds/saves Docker images, and packs **source + tools + images** into **`eazybank-offline.tar`**.
-
-## Online PC — Docker-only .tar (optional)
-
-```bat
-docker-prepare-offline.bat
-```
-
-Creates **`eazybank-docker-offline.tar`** (source + images, no JDK/Maven). Use only if you do not need offline rebuilds.
-
-## Offline PC — Docker Desktop
-
-1. Extract: `tar -xf eazybank-offline.tar` (or the Docker-only `.tar`)
-2. From the `eazybank` folder:
+Requires Docker Desktop (or Docker Engine).
 
 ```bat
 docker-start.bat
 ```
 
-Loads images if needed, then `docker compose up -d`.
+Loads `eazybank-docker-images.tar` when images are missing, then `docker compose up -d`.
+
+```bat
+docker-stop.bat
+```
 
 | URL | |
 |---|---|
@@ -44,37 +22,24 @@ Loads images if needed, then `docker compose up -d`.
 | Swagger | http://localhost:8072/swagger-ui.html |
 | Eureka | http://localhost:8070 |
 
-Optional API regression: `test-all.bat`
+After start, wait until services are healthy (about a minute) before calling APIs or `test-all.bat`.
 
-Stop: `docker-stop.bat`
-
-## Offline develop without Docker
-
-If you used `package-offline.bat`, you can ignore Docker and use:
-
-```bat
-build.bat
-start-all.bat
-```
-
-No Docker required. Stop with `start-all.bat stop` or `stop-all.bat`.
+Do not run `start-all.bat` and Docker together — they use the same host ports.
 
 ## Layout
 
 | File | Role |
 |---|---|
-| [Dockerfile](Dockerfile) | Shared JRE 21 image; `SERVICE` build-arg selects the jar |
+| [Dockerfile](Dockerfile) | Shared JRE 8 image; `SERVICE` build-arg selects the jar |
 | [docker-compose.yml](docker-compose.yml) | Seven services, healthchecks, Eureka/config hostnames |
-| `package-offline.bat` | **Preferred:** source + tools + images → `eazybank-offline.tar` |
-| `docker-prepare-offline.bat` | Docker-only `.tar` (no tools) |
-| `docker-start.bat` | Offline: load + up |
-| `docker-stop.bat` | `compose down` |
+| `docker-start.bat` | Load images if needed, then up |
+| `docker-stop.bat` | Compose down |
+| `eazybank-docker-images.tar` | Pre-built images for `docker load` |
 
-Inside Compose, services talk via Docker DNS (`configserver`, `eurekaserver`, …). The host still uses `localhost` ports (8072, etc.).
+Inside Compose, services talk via Docker DNS (`configserver`, `eurekaserver`, …). From the host, use `localhost` ports (8072, etc.).
 
 ## Notes
 
-- First build on the online PC needs network to pull `eclipse-temurin:8-jre-jammy`.
-- App bytecode is **Java 8** (Spring Boot 2.7); the same images run on any host Docker with that JRE base.
-- Kafka messaging is off (no broker); accounts and message still run as HTTP services.
-- After code changes offline: rebuild with `build.bat` + `start-all.bat`, **or** rebuild jars then `docker compose build` (base image must already be loaded from the tar).
+- Base image: `eclipse-temurin:8-jre-jammy`
+- Kafka messaging is off (no broker); accounts and message still run as HTTP services
+- To change code and run again without Docker, use `build.bat` and `start-all.bat` instead
